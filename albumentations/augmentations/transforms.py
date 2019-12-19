@@ -512,6 +512,7 @@ class Rotate(DualTransform):
         mask_value=None,
         always_apply=False,
         p=0.5,
+        absolute=False,
     ):
         super(Rotate, self).__init__(always_apply, p)
         self.limit = to_tuple(limit)
@@ -519,6 +520,7 @@ class Rotate(DualTransform):
         self.border_mode = border_mode
         self.value = value
         self.mask_value = mask_value
+        self.absolute = absolute
 
     def apply(self, img, angle=0, interpolation=cv2.INTER_LINEAR, **params):
         return F.rotate(img, angle, interpolation, self.border_mode, self.value)
@@ -527,7 +529,10 @@ class Rotate(DualTransform):
         return F.rotate(img, angle, cv2.INTER_NEAREST, self.border_mode, self.mask_value)
 
     def get_params(self):
-        return {"angle": random.uniform(self.limit[0], self.limit[1])}
+        if not self.absolute:
+            return {"angle": random.uniform(self.limit[0], self.limit[1])}
+        else:
+            return {"angle": self.limit[1]}
 
     def apply_to_bbox(self, bbox, angle=0, **params):
         return F.bbox_rotate(bbox, angle, **params)
@@ -620,6 +625,7 @@ class ShiftScaleRotate(DualTransform):
         mask_value=None,
         always_apply=False,
         p=0.5,
+        absolute=False,
     ):
         super(ShiftScaleRotate, self).__init__(always_apply, p)
         self.shift_limit = to_tuple(shift_limit)
@@ -629,6 +635,7 @@ class ShiftScaleRotate(DualTransform):
         self.border_mode = border_mode
         self.value = value
         self.mask_value = mask_value
+        self.absolute = absolute
 
     def apply(self, img, angle=0, scale=0, dx=0, dy=0, interpolation=cv2.INTER_LINEAR, **params):
         return F.shift_scale_rotate(img, angle, scale, dx, dy, interpolation, self.border_mode, self.value)
@@ -642,12 +649,20 @@ class ShiftScaleRotate(DualTransform):
         return F.keypoint_shift_scale_rotate(keypoint, angle, scale, dx, dy, rows, cols)
 
     def get_params(self):
-        return {
-            "angle": random.uniform(self.rotate_limit[0], self.rotate_limit[1]),
-            "scale": random.uniform(self.scale_limit[0], self.scale_limit[1]),
-            "dx": random.uniform(self.shift_limit[0], self.shift_limit[1]),
-            "dy": random.uniform(self.shift_limit[0], self.shift_limit[1]),
-        }
+        if not self.absolute:
+            return {
+                "angle": random.uniform(self.rotate_limit[0], self.rotate_limit[1]),
+                "scale": random.uniform(self.scale_limit[0], self.scale_limit[1]),
+                "dx": random.uniform(self.shift_limit[0], self.shift_limit[1]),
+                "dy": random.uniform(self.shift_limit[0], self.shift_limit[1]),
+            }
+        else:
+             return {
+                "angle": self.rotate_limit[1],
+                "scale": self.scale_limit[1],
+                "dx": self.shift_limit[1],
+                "dy": self.shift_limit[1],
+            }
 
     def apply_to_bbox(self, bbox, angle, scale, dx, dy, interpolation=cv2.INTER_LINEAR, **params):
         return F.bbox_shift_scale_rotate(bbox, angle, scale, dx, dy, interpolation=cv2.INTER_LINEAR, **params)
